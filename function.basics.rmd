@@ -1,0 +1,335 @@
+---
+  title: "Having fun with FUNctions ;) <br/>"
+author: "Nick Sard <br/> Fisheries and Wildlife, OSU, HMSC, Newport, OR <br/>"
+date: "Presented 1a4 April, 2015, HMSC UseRs meeting"
+output:
+  ioslides_presentation:
+  fig_height: 5
+fig_width: 8
+highlight: tango
+beamer_presentation:
+  highlight: tango
+---
+  
+  ## Sources for some of the code and ideas I used:
+  - http://www.ats.ucla.edu/stat/r/library/intro_function.htm
+- http://adv-r.had.co.nz/Functions.html
+- http://www.statmethods.net/management/userfunctions.html
+- http://www.stat.berkeley.edu/~statcur/Workshop2/Presentations/functions.pdf
+- http://www.r-bloggers.com/how-to-write-and-debug-an-r-function/
+  - http://cran.r-project.org/doc/contrib/Lemon-kickstart/kr_rfunc.html
+- http://nicercode.github.io/guides/functions/
+  
+  ## Outline:
+  - What is a function?
+- Basic examples
+- Returning values
+- Local and global values
+- Debugging
+- Location and organization
+- Source()
+
+
+## What is a function?
+
+- Basic structure
+
+```{r}
+name.of.function <- function(argument1, argument2) {
+  statements
+  return(something)
+}
+```
+- Make the name informative
+- Arguments can be single values, vectors, matrices, data frames, lists
+- Statements are what you want done
+- It can be just a single line of code or many
+- Try not to make it too long
+- Don't forget the return() at the end!
+
+## Returning values to user
+- Make a simple function
+```{r}
+fun1 <- function(x) {
+x*2  
+3 * x - 1
+}
+fun1(5)
+```
+- Only the last expression evaluated is returned
+- Note that we didn't save  the calculation to an object
+- So it gets automatically returned to the console
+
+## Returning values to user
+- Same function except we saved it to an object
+```{r}
+fun2 <- function(x) {
+  y <- 3 * x - 1
+}
+fun2(5)
+```
+- Doesn't return anything because the object was a local variable
+- Local variables are defined inside {}
+- E.g. For loops and functions
+
+## Returning values to user
+- Two ways to resolve this "issue"
+- 1. Recommend using return()
+```{r}
+fun2.1 <- function(x) {
+a <- x*2
+b <- paste(a, "is my favorite number")
+y <- 3 * x - 1
+return(y)
+}
+fun2.1(5)
+```
+- But a and b were cannot be returned...
+
+## Returns only a single object, but we can use a list to return multiple objects
+
+```{r}
+fun2.1 <- function(x) {
+a <- x*2
+b <- paste(a, "is my favorite number")
+y <- 3 * x - 1
+return(list(a,b,y))
+}
+fun2.1(5)
+```
+
+## Local and global variables
+- Can also save it to a global object
+```{r}
+fun2.2 <- function(x) {
+Y <<- 3 * x - 1
+}
+fun2.2(6)
+```
+- Use <<-
+- Convention is to use CAPITAL names like Y
+- Not recommended - Only seen this occasionally used in for loops
+
+## Some functions use other functions
+- Goal is to create a function that welcomes you to R
+- There are some functions built into R
+- http://www.statmethods.net/management/functions.html
+```{r}
+#Gives your system's information and the R version you are using
+myinfo <- Sys.info() 
+myinfo[7]
+
+rinfo <- R.Version()
+rinfo$nickname
+```
+
+## Now for the function...
+
+```{r}
+hiyou <- function(){
+  #extracting some information
+  myinfo <- Sys.info() ; rinfo <- R.Version()
+  
+  #making three statements
+  hi <- paste("Hi",paste0(myinfo[7],"!"))
+  welcome <- paste("Welcome to",paste0(rinfo$version.string,"!"))
+  iam <- paste("My name is:",paste0(rinfo$nickname,"."),
+               "Let's go have some fun!")
+  
+  #returning a cat statement
+  return(cat(paste0(hi,"\n",welcome,"\n",iam)))
+}
+hiyou()
+```
+
+## Creating a stats summary function 
+
+```{r}
+mysummary <- function(x, output=1) {
+  #calculating stats of interest
+  center <- mean(x) 
+  spread <- sd(x)
+  
+  #Using output to determine how the information is
+  #displayed to the user
+  if (output == 1) {
+    return(cat("Mean=", center, "\n", "SD=", spread, "\n"))
+  } 
+  
+  if (output == 2) {
+    df <- data.frame(statistic = c("mean","sd"),
+                     value = c(center,spread))  
+    return(df)
+  }
+}
+```
+
+## Basic stat function example
+
+```{r} 
+set.seed(1234)
+x <- rnorm(n = 500,mean =  4,sd = 1) 
+mysummary(x)
+mysummary(x, output=2)
+mysummary(output=2,x)
+```
+
+## Debugging
+-  We can add some if statements to prevent errors
+```{r}
+mysummary <- function(x, output=1) {
+  #calculating stats of interest
+  center <- mean(x) 
+  spread <- sd(x)
+  #Using output to determine how the information is
+  #displayed to the user
+  if (output == 1) {
+    return(cat("Mean=", center, "\n", "SD=", spread, "\n"))
+  } 
+  if (output == 2) {
+    df <- data.frame(statistic = c("mean","sd"),
+                     value = c(center,spread))  
+    return(df)
+  }
+}
+```
+
+## Debugging
+- Use if() to make sure the right type of data is being used. When it isn't -
+- stop() - stops function
+- warning() - adds a warning
+- print() can provide feedback to user
+```{r}
+mysummary <- function(x, output=1) {
+if(is.numeric(x)!=T){
+stop("x is not numeric")
+}
+if(length(x)<30) {
+warning("Sample size is <30",call. = F)
+} 
+print("Calculating mean and standard deviation")
+# the rest of the function...
+}
+```
+
+## mysummary() in action
+
+```{r,echo=F}
+mysummary <- function(x, output=1) {
+
+if(is.numeric(x)!=T){
+stop("x is not a vector of numeric values")
+}
+
+if(length(x)<30) {
+warning("Sample size is less than 30",call. = F)
+} 
+
+print("Calculating mean and standard deviation")
+#calculating stats of interest
+center <- mean(x) 
+spread <- sd(x)
+
+#Using output to determine how the information is
+#displayed to the user
+if (output == 1) {
+return(cat("Mean=", center, "\n", "SD=", spread, "\n"))
+} 
+
+if (output == 2) {
+df <- data.frame(statistic = c("mean","sd"),
+value = c(center,spread))  
+return(df)
+}
+}
+```
+
+```{r}
+mysummary(x = rnorm(100,4,1))
+#mysummary(x = LETTERS[1:10])
+mysummary(x = c(1,2,3))
+```
+
+## Functions with apply()
+- Goal calculate geometric mean across all columns
+
+```{r,echo=FALSE}
+data(mtcars)
+```
+
+```{r}
+gm_mean = function(x, na.rm=TRUE){
+exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))
+}
+# column geometric means - apply() takes matrices
+apply(as.matrix(mtcars[,1:4]), MARGIN = 2, gm_mean)
+
+#compared to mean
+apply(as.matrix(mtcars[,1:4]), MARGIN = 2, mean)
+```
+
+## Recursive functions
+- Fibonacci sequence example
+```{r}
+fib <- function(n){
+#base case
+if(n==1){
+return(1)
+} else if(n==2) {
+return(1)
+#inductive case
+} else {
+a = fib(n-1)
+b = fib(n-2)
+return(a+b)
+}
+}
+c(fib(1),fib(2),fib(3),fib(4),fib(5),fib(6))
+```
+
+## Best practices for writing functions
+- Keep functions short
+- Split up function into easy to understand chunks
+- Can call other functions
+- Code is cleaner and easy to test and update 
+- Put in comments so that user knows:
+- What the inputs to the function are
+- What the function does
+- What the output(s) are
+- Check for errors 
+- Test function with simple examples
+- Use debugging and error messages
+
+## Location and organization
+- Throughout R script
+- Recommended at the beginning
+- Single or multiple function(s)
+- Save in another script just for functions
+- Single or multiple function(s)
+
+## Use source() to call a collection of functions
+- Make an R script containing all your functions
+- Call at the beginning of your scripts
+
+```{r,eval=FALSE}
+source("my.functions.R")
+```
+
+## Don't forget to provide necessary information in the source script
+
+```{r}
+### function.name()
+
+#Description: This function does some really cool stuff! Details...
+
+#Inputs:
+# df - a data frame with three columns
+#   column 1 - population same
+#   column 2 - sample ID
+#   column 3 - length
+
+#Outputs
+# options - Default is 1
+#   option 1 - returns mean and standard deviation for length
+#   option 2 - creates a histogram of lengths
+```
